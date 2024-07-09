@@ -15,6 +15,12 @@ def about(request):
     return render(request, 'about.html')
 
 
+def category_summary(request):
+    categories = Category.objects.all()
+    context = {'categories': categories}
+    return render(request, 'category_summary.html', context)
+
+
 def category(request, foo):
     foo = foo.replace('_', ' ')
     foo = foo.replace('-', ' ')
@@ -29,6 +35,7 @@ def category(request, foo):
     except:
         messages.error(request, 'Category does not exist')
         return redirect('home')
+
 
 def product(request, pk):
     product = Product.objects.get(id=pk)
