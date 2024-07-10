@@ -1,8 +1,9 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.models import User
 from django.contrib import messages
-from .forms import SignUpForm
-from .models import Product, Category
+from .forms import SignUpForm, UserUpdateForm, ChangePasswordForm, UserInfoForm
+from .models import Product, Category, Profile
 
 
 def home(request):
@@ -77,10 +78,73 @@ def register_user(request):
             # log in user
             user = authenticate(username=username, password=password)
             login(request, user)
-            messages.success(request, 'You have registered successfully')
-            return redirect('home')
+            messages.success(request, 'Username created - Please fill out your info belowcmd')
+            return redirect('update_info')
         else:
             messages.success(request, 'Whoops! There was a problem Registering, please try again')
             return redirect('register')
     else:
         return render(request, 'register.html', context)
+
+
+def update_user(request):
+    if request.user.is_authenticated:
+        # Get the logged-in user
+        current_user = User.objects.get(id=request.user.id)
+        form = UserUpdateForm(request.POST or None, instance=current_user)
+
+        if form.is_valid():
+            form.save()
+            login(request, current_user)
+            messages.success(request, 'Your account has been updated!')
+            return redirect('home')
+        else:
+            context = {'form': form}
+            return render(request, 'update_user.html', context)
+
+    else:
+        messages.error(request, 'You are not logged in')
+        return redirect('login')
+
+
+def update_password(request):
+    if request.user.is_authenticated:
+        current_user = request.user
+        # Did they fill out the form
+        if request.method == 'POST':
+            form = ChangePasswordForm(current_user, request.POST)
+            if form.is_valid():
+                form.save()
+                login(request, current_user)
+                messages.success(request, 'Your password has been updated!')
+                return redirect('home')
+            else:
+                for error in list(form.errors.values()):
+                    messages.error(request, error)
+                return redirect('update_password')
+        else:
+            form = ChangePasswordForm(current_user)
+            context = {'form': form}
+            return render(request, 'update_password.html', context)
+    else:
+        messages.error(request, 'You are not logged in')
+        return redirect('login')
+
+
+def update_info(request):
+    if request.user.is_authenticated:
+        # Get the logged-in user
+        current_user = Profile.objects.get(user__id=request.user.id)
+        form = UserInfoForm(request.POST or None, instance=current_user)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Your info has been updated!')
+            return redirect('home')
+        else:
+            context = {'form': form}
+            return render(request, 'update_info.html', context)
+
+    else:
+        messages.error(request, 'You are not logged in')
+        return redirect('login')
