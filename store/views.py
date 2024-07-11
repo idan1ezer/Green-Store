@@ -2,8 +2,11 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.contrib import messages
+from django.db.models import Q
+from cart.cart import Cart
 from .forms import SignUpForm, UserUpdateForm, ChangePasswordForm, UserInfoForm
 from .models import Product, Category, Profile
+import json
 
 
 def home(request):
@@ -52,6 +55,21 @@ def login_user(request):
         if user is not None:
             login(request, user)
             messages.success(request, 'You are now logged in')
+
+            # Do some shopping cart stuff
+            current_user = Profile.objects.get(user__id=request.user.id)
+            # Get their saved cart from database
+            saved_cart = current_user.old_cart
+            # Convert database string to python dictionary
+            if saved_cart:
+                converted_cart = json.loads(saved_cart)
+                # Add the loaded cart dictionary to our session
+                # Get the cart
+                cart = Cart(request)
+                # Loop through the cart and add the items from the database
+                for key, value in converted_cart.items():
+                    cart.add(product=key, quantity=value, is_load=True)
+
             return redirect('home')
         else:
             messages.success(request, 'Invalid username or password')
@@ -148,3 +166,23 @@ def update_info(request):
     else:
         messages.error(request, 'You are not logged in')
         return redirect('login')
+
+
+def search(request):
+    # Determine if they filled out the form
+    if request.method == 'POST':
+        searched = request.POST['searched']
+        # Query the Product DB model
+        searched = Product.objects.filter(
+            Q(name__icontains=searched) |
+            Q(description__icontains=searched)
+        )
+        # Test for null
+        if not searched:
+            messages.success(request, 'Product does not exist')
+            return render(request, 'search.html', {})
+        else:
+            return render(request, 'search.html', {'searched': searched})
+    else:
+        return render(request, 'search.html', {})
+

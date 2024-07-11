@@ -29,7 +29,7 @@ def add_to_cart(request):
         product = get_object_or_404(Product, id=product_id)
 
         # Save to session
-        cart.add(product=product, quantity=product_qty)
+        cart.add(product=product, quantity=product_qty, is_load=False)
 
         # Get Cart Quantity
         cart_quantity = cart.__len__()
